@@ -1,11 +1,587 @@
-<!DOCTYPE html>
+<!DOCTYPE HTML>
 <html>
-  <head>
-    <title>This is a title</title>
-  </head>
-  <body>
-    <div>
-        <p>Hello world!</p>
-    </div>
-  </body>
+
+<head>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+        integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
+        integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
+        crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
+        integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+        crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+        integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+        crossorigin="anonymous"></script>
+</head>
+
+<body data-rsssl=1>
+    <canvas id="myCanvas" width="800" height="640"></canvas>
+    <form>
+        <button type="submit" id="start" class="">開始遊戲</button>
+    </form>
+    
+    <script>
+        var canvas = document.getElementById('myCanvas');
+        var ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = "#303070";
+        ctx.fillRect(0, 0, 800, 640);
+        for(var i=0;i<1000;i++){
+            drawcircle(Math.floor(Math.random()*800),Math.floor(Math.random()*640),Math.floor(Math.random()*2)+1,"#ffffff")
+        }
+        var arr=[];
+        for(var i=0;i<10;i++){
+            arr[i]=[];
+            for(var j=0;j<20;j++){
+                arr[i][j]="#c0c0c0";
+            }
+        }
+        var current_block=[];
+        var current_block_type=0;
+        var current_spin_center=[];
+        var current_color;
+        var rotate_state_type=0;
+        var already_rotate;
+        var hold_block_type=-1;
+        var hold_color;
+        var already_hold=0;
+        var bag=[];
+        var next_block_bag=[];
+        var block_cnt=0;
+        var level;
+        var score;
+        var line;
+        var back_to_back=0;
+        initial();
+        //drop
+        setInterval(function(){
+            var can_drop=1;
+            for(var i=0;i<4;i++)
+                if(arr[current_block[i][0]][current_block[i][1]+1]!="#c0c0c0")
+                    can_drop=0;
+            if(can_drop){
+                current_spin_center[1]++;
+                for(var i=0;i<4;i++)
+                    current_block[i][1]++;
+            }else{
+                for(var i=0;i<4;i++)
+                    arr[current_block[i][0]][current_block[i][1]]=current_color;
+                cleanline();
+                newblock();
+            }
+            blockupdate();
+        },gamespeed)
+        //keyboard
+        document.addEventListener('keydown', function(event) {
+            //space : drop to the buttom
+            if(event.keyCode == 32) {
+                var can_drop=1;
+                var drop_count=0;
+                for(var i=0;i<4;i++)
+                    if(arr[current_block[i][0]][current_block[i][1]+1]!="#c0c0c0")
+                        can_drop=0;
+                while(can_drop==1){
+                    drop_count++;
+                    for(var i=0;i<4;i++)
+                        current_block[i][1]++;
+                    for(var i=0;i<4;i++)
+                        if(arr[current_block[i][0]][current_block[i][1]+1]!="#c0c0c0")
+                            can_drop=0;
+                }
+                for(var i=0;i<4;i++)
+                    arr[current_block[i][0]][current_block[i][1]]=current_color;
+                cleanline();
+                newblock();
+                blockupdate();
+                score+=2*level*drop_count;
+                scoreupdate();
+            }
+            //arrowleft : move left
+            if(event.keyCode == 37) {
+                var can_move=1;
+                for(var i=0;i<4;i++)
+                    if(arr[current_block[i][0]-1][current_block[i][1]]!="#c0c0c0")
+                        can_move=0;
+                if(can_move){
+                    current_spin_center[0]--;
+                    for(var i=0;i<4;i++)
+                        current_block[i][0]--;
+                }
+                blockupdate();
+            }
+            //arrowright : move right
+            if(event.keyCode == 39) {
+                var can_move=1;
+                for(var i=0;i<4;i++)
+                    if(arr[current_block[i][0]+1][current_block[i][1]]!="#c0c0c0")
+                        can_move=0;
+                if(can_move){
+                    current_spin_center[0]++;
+                    for(var i=0;i<4;i++)
+                        current_block[i][0]++;
+                }
+                blockupdate();
+            }
+            //arrowdown : move down
+            if(event.keyCode == 40) {
+                var can_drop=1;
+                for(var i=0;i<4;i++)
+                    if(arr[current_block[i][0]][current_block[i][1]+1]!="#c0c0c0")
+                        can_drop=0;
+                if(can_drop){
+                    current_spin_center[1]++;
+                    for(var i=0;i<4;i++)
+                        current_block[i][1]++;
+                    score+=1*level;
+                    scoreupdate();
+                }
+                blockupdate();
+            }
+            //arrowup : right rotate
+            if(event.keyCode == 38) {
+                rotate(1);
+                blockupdate();
+            }
+            //keyc : hold
+            if(event.keyCode == 67) {
+                hold();
+            }
+            //keyx : new game
+            if(event.keyCode == 88) {
+                initial();
+            }
+            //keyz : left rotate
+            if(event.keyCode == 90) {
+                rotate(3);
+                blockupdate();
+            }
+        });
+        //gamestart
+        function initial(){
+            for(var i=0;i<10;i++){
+                for(var j=0;j<20;j++){
+                    arr[i][j]="#c0c0c0";
+                }
+            }
+            block_cnt=5;
+            randomblock();
+            for(var i=0;i<5;i++) next_block_bag[i]=bag[i];
+            newblock();
+            clock=0;
+            gamespeed=1000;
+            level=1;
+            score=0;
+            line=0;
+            scoreupdate()
+            for(var i=-7;i<-1;i++){
+                for(var j=1;j<7;j++){
+                    drawrect(i,j,"#c0c0c0",5,"#a0a0a0",0);
+                }
+            }
+            hold_block_type=-1;
+            already_hold=0;
+        }
+        //generate block
+        function randomblock(){
+            bag=[0,1,2,3,4,5,6,Math.floor(Math.random()*7)];
+            var a,b;
+            var temp;
+            for(var i=0;i<100;i++){
+                a=Math.floor(Math.random()*8);
+                b=Math.floor(Math.random()*8);
+                temp=bag[a];
+                bag[a]=bag[b];
+                bag[b]=temp;
+            }
+        }
+        function newblock(){
+            current_block_type=next_block_bag[0];
+            if(current_block_type == 0){
+                current_color = "#ff0000"
+            }else if(current_block_type == 1){
+                current_color = "#00ff00"
+            }else if(current_block_type == 2){
+                current_color = "#1b00ff"
+            }else if(current_block_type == 3){
+                current_color = "#fdaa00"
+            }else if(current_block_type == 4){
+                current_color = "#9900fc"
+            }else if(current_block_type == 5){
+                current_color = "#ffff00"
+            }else if(current_block_type == 6){
+                current_color = "#07feff"
+            }
+            current_spin_center=[4,1];
+            current_block=statetoblock(statelist(0,current_block_type),current_spin_center);
+            rotate_state_type=0;
+            nextblock();
+            blockupdate();
+            already_hold=0;
+        }
+        function nextblock(){
+            for(var i=0;i<4;i++){
+                next_block_bag[i]=next_block_bag[i+1];
+            }
+            next_block_bag[4]=bag[block_cnt%8];
+            block_cnt++;
+            if(block_cnt%8==0)
+                randomblock();
+            for(var i=11;i<17;i++){
+                for(var j=1;j<20;j++){
+                    drawrect(i,j,"#c0c0c0",5,"#a0a0a0",0);
+                }
+            }
+            for(var w=0;w<5;w++){
+                var next_block_type=next_block_bag[w];
+                var next_color;
+                if(next_block_type == 0){
+                    next_color = "#ff0000"
+                }else if(next_block_type == 1){
+                    next_color = "#00ff00"
+                }else if(next_block_type == 2){
+                    next_color = "#1b00ff"
+                }else if(next_block_type == 3){
+                    next_color = "#fdaa00"
+                }else if(next_block_type == 4){
+                    next_color = "#9900fc"
+                }else if(next_block_type == 5){
+                    next_color = "#ffff00"
+                }else if(next_block_type == 6){
+                    next_color = "#07feff"
+                }
+                var next_block=statelist(0,next_block_type);
+                for(var i=0;i<4;i++){
+                    drawrect(next_block[i][0]+13,next_block[i][1]+4+w*3,next_color,5,"#0f0f0f",0);
+                    drawrect(next_block[i][0]+13,next_block[i][1]+4+w*3,next_color,5,secondcolor(next_color),5);
+                }
+            }
+        }
+        function secondcolor(color){
+            if(color == "#ff0000"){
+                return "#cf0000"
+            }else if(color == "#00ff00"){
+                return "#00cf00"
+            }else if(color == "#1b00ff"){
+                return "#1800cf"
+            }else if(color == "#fdaa00"){
+                return "#cd8600"
+            }else if(color == "#9900fc"){
+                return "#7600cc"
+            }else if(color == "#ffff00"){
+                return "#cfcf00"
+            }else if(color == "#07feff"){
+                return "#06cecf"
+            }else if(color == "#c0c0c0"){
+                return "#909090"
+            }
+        }
+        function hold(){
+            if(already_hold) return;
+            already_hold=1;
+            if(hold_block_type!=-1){
+                var temp=current_block_type;
+                current_block_type=hold_block_type;
+                hold_block_type=temp;
+                current_color=hold_color;
+                current_spin_center=[4,1];
+                current_block=statetoblock(statelist(0,current_block_type),current_spin_center);
+                rotate_state_type=0;
+                blockupdate();
+            }else{
+                hold_block_type=current_block_type;
+                newblock();
+            }
+            for(var i=-7;i<-1;i++){
+                for(var j=1;j<7;j++){
+                    drawrect(i,j,"#c0c0c0",5,"#a0a0a0",0);
+                }
+            }
+            if(hold_block_type == 0){
+                hold_color = "#ff0000"
+            }else if(hold_block_type == 1){
+                hold_color = "#00ff00"
+            }else if(hold_block_type == 2){
+                hold_color = "#1b00ff"
+            }else if(hold_block_type == 3){
+                hold_color = "#fdaa00"
+            }else if(hold_block_type == 4){
+                hold_color = "#9900fc"
+            }else if(hold_block_type == 5){
+                hold_color = "#ffff00"
+            }else if(hold_block_type == 6){
+                hold_color = "#07feff"
+            }
+            var hold_block=statelist(0,hold_block_type);
+            for(var i=0;i<4;i++){
+                drawrect(hold_block[i][0]-5,hold_block[i][1]+4,hold_color,5,"#0f0f0f",0);
+                drawrect(hold_block[i][0]-5,hold_block[i][1]+4,hold_color,5,secondcolor(hold_color),5);
+            }
+        }
+        //blockrotate
+        function rotate(direction){
+            already_rotate=1;
+            if(current_color=="#ffff00"){
+                return;
+            }else if(current_color=="#07feff"){
+                var order=[];
+                if(rotate_state_type==0){
+                    if(direction==1){
+                        order=[[-2,0],[1,0],[-2,1],[1,-2]];
+                    }else{
+                        order=[[-1,0],[2,0],[-1,-2],[2,1]];
+                    }
+                }else if(rotate_state_type==1){
+                    if(direction==1){
+                        order=[[-1,0],[2,0],[-1,-2],[2,1]];
+                    }else{
+                        order=[[2,0],[-1,0],[2,-1],[-1,2]];
+                    }
+                }else if(rotate_state_type==2){
+                    if(direction==1){
+                        order=[[2,0],[-1,0],[2,-1],[-1,2]];
+                    }else{
+                        order[[1,0],[-2,0],[1,2],[-2,-1]];
+                    }
+                }else if(rotate_state_type==3){
+                    if(direction==1){
+                        order=[[1,0],[-2,0],[1,2],[-2,-1]];
+                    }else{
+                        order[[-2,0],[1,0],[-2,1],[1,-2]];
+                    }
+                }
+                current_block=rotatefittest(order,(rotate_state_type+direction)%4,current_block_type);
+            }else{
+                var order=[];
+                if(rotate_state_type==0){
+                    if(direction==1){
+                        order=[[-1,0],[-1,-1],[0,2],[-1,2]];
+                    }else{
+                        order=[[1,0],[1,-1],[0,2],[1,2]];
+                    }
+                }else if(rotate_state_type==1){
+                    order=[[1,0],[1,1],[0,-2],[1,-2]];
+                }else if(rotate_state_type==2){
+                    if(direction==1){
+                        order=[[1,0],[1,-1],[0,2],[1,2]];
+                    }else{
+                        order[[-1,0],[-1,-1],[0,2],[-1,2]];
+                    }
+                }else if(rotate_state_type==3){
+                    order=[[-1,0],[-1,1],[0,-2],[-1,-2]];
+                }
+                current_block=rotatefittest(order,(rotate_state_type+direction)%4,current_block_type);
+            }
+            if(already_rotate){
+                rotate_state_type+=direction;
+                rotate_state_type%=4;
+            }
+        }
+        function statelist(rotatestatetype,blocktype){
+            if(blocktype==0){
+                if(rotatestatetype==0){
+                    return [[-1,-1],[0,-1],[0,0],[1,0]];
+                }else if(rotatestatetype==1){
+                    return [[1,-1],[0,0],[1,0],[0,1]];
+                }else if(rotatestatetype==2){
+                    return [[-1,0],[0,0],[0,1],[1,1]];
+                }else if(rotatestatetype==3){
+                    return [[0,-1],[-1,0],[0,0],[-1,1]];
+                }
+            }else if(blocktype==1){
+                if(rotatestatetype==0){
+                    return [[0,-1],[1,-1],[-1,0],[0,0]];
+                }else if(rotatestatetype==1){
+                    return [[0,-1],[0,0],[1,0],[1,1]];
+                }else if(rotatestatetype==2){
+                    return [[0,0],[1,0],[-1,1],[0,1]];
+                }else if(rotatestatetype==3){
+                    return [[-1,-1],[-1,0],[0,0],[0,1]];
+                }
+            }else if(blocktype==2){
+                if(rotatestatetype==0){
+                    return [[-1,-1],[-1,0],[0,0],[1,0]];
+                }else if(rotatestatetype==1){
+                    return [[0,-1],[1,-1],[0,0],[0,1]];
+                }else if(rotatestatetype==2){
+                    return [[-1,0],[0,0],[1,0],[1,1]];
+                }else if(rotatestatetype==3){
+                    return [[0,-1],[0,0],[-1,1],[0,1]];
+                }
+            }else if(blocktype==3){
+                if(rotatestatetype==0){
+                    return [[1,-1],[-1,0],[0,0],[1,0]];
+                }else if(rotatestatetype==1){
+                    return [[0,-1],[0,0],[0,1],[1,1]];
+                }else if(rotatestatetype==2){
+                    return [[-1,0],[0,0],[1,0],[-1,1]];
+                }else if(rotatestatetype==3){
+                    return [[-1,-1],[0,-1],[0,0],[0,1]];
+                }
+            }else if(blocktype==4){
+                if(rotatestatetype==0){
+                    return [[0,-1],[-1,0],[0,0],[1,0]];
+                }else if(rotatestatetype==1){
+                    return [[0,-1],[0,0],[1,0],[0,1]];
+                }else if(rotatestatetype==2){
+                    return [[-1,0],[0,0],[1,0],[0,1]];
+                }else if(rotatestatetype==3){
+                    return [[0,-1],[-1,0],[0,0],[0,1]];
+                }
+            }else if(blocktype==5){
+                return [[0,-1],[1,-1],[0,0],[1,0]];
+            }else if(blocktype==6){
+                if(rotatestatetype==0){
+                    return [[-1,0],[0,0],[1,0],[2,0]];
+                }else if(rotatestatetype==1){
+                    return [[1,-1],[1,0],[1,1],[1,2]];
+                }else if(rotatestatetype==2){
+                    return [[-1,1],[0,1],[1,1],[2,1]];
+                }else if(rotatestatetype==3){
+                    return [[0,-1],[0,0],[0,1],[0,2]];
+                }
+            }
+        }
+        function statetoblock(rotatearray,spincenter){
+            var rotate_block=[];
+            rotate_block=rotatearray;
+            for(var i=0;i<4;i++){
+                rotate_block[i][0]+=spincenter[0];
+                rotate_block[i][1]+=spincenter[1];
+            }
+            return rotate_block;
+        }
+        function rotatefittest(order,rotatestate,blocktype){
+            var rotatearray=statelist(rotatestate,blocktype);
+            var rotate_test_block=statetoblock(rotatearray,current_spin_center);
+            if(rotateblockfit(rotate_test_block)){
+                return rotate_test_block;
+            }
+            for(var i=0;i<4;i++){
+                rotatearray=statelist(rotatestate,blocktype);
+                var x=order[i][0],y=order[i][1];
+                current_spin_center[0]+=x;
+                current_spin_center[1]+=y;
+                rotate_test_block=statetoblock(rotatearray,current_spin_center);
+                if(rotateblockfit(rotate_test_block)){
+                    return rotate_test_block;
+                }
+                current_spin_center[0]-=x;
+                current_spin_center[1]-=y;
+            }
+            already_rotate=0;
+            return current_block;
+        }
+        function rotateblockfit(rotateblock){
+            var can_rotate=1;
+            for(var i=0;i<4;i++){
+                if(rotateblock[i][0]<0 || rotateblock[i][0]>9 || rotateblock[i][1]<0 || rotateblock[i][1]>19) can_rotate=0;
+                else if(arr[rotateblock[i][0]][rotateblock[i][1]]!="#c0c0c0") can_rotate=0;
+            }
+            return can_rotate;
+        }
+        //score
+        function cleanline(){
+            var clean=1;
+            var clean_count=0;
+            for(var j=0;j<20;j++){
+                clean=1;
+                for(var i=0;i<10;i++)
+                    if(arr[i][j]=="#c0c0c0")
+                        clean=0;
+                if(clean){
+                    for(var k=j;k>0;k--)
+                        for(var l=0;l<10;l++)
+                            arr[l][k]=arr[l][k-1];
+                    line++;
+                    clean_count++;
+                }
+            }
+            level=Math.floor(line/10)+1;
+            gamespeed=1000-20*level;
+            var is_tspin=0;
+            if(current_block_type==4){
+                if(rotate_state_type==0 && (arr[current_spin_center[0]-1][current_spin_center[1]-1]!="#c0c0c0" || arr[current_spin_center[0]][current_spin_center[1]-2]!="#c0c0c0" || arr[current_spin_center[0]+1][current_spin_center[1]-1]!="#c0c0c0"))
+                    is_tspin=1;
+                if(rotate_state_type==1 && (arr[current_spin_center[0]][current_spin_center[1]-2]!="#c0c0c0" || arr[current_spin_center[0]+1][current_spin_center[1]-1]!="#c0c0c0"))
+                    is_tspin=1;
+                if(rotate_state_type==2 && (arr[current_spin_center[0]-1][current_spin_center[1]-1]!="#c0c0c0" || arr[current_spin_center[0]][current_spin_center[1]-1]!="#c0c0c0" || arr[current_spin_center[0]+1][current_spin_center[1]-1]!="#c0c0c0"))
+                    is_tspin=1;
+                if(rotate_state_type==3 && (arr[current_spin_center[0]-1][current_spin_center[1]-1]!="#c0c0c0" || arr[current_spin_center[0]][current_spin_center[1]-2]!="#c0c0c0"))
+                    is_tspin=1;
+            }
+            if(is_tspin){
+                if(clean_count==1) score+=800*level;
+                if(clean_count==2) score+=1200*level;
+                if(clean_count==3) score+=1600*level;
+                if(back_to_back){
+                    if(clean_count==1) score+=400*level;
+                    if(clean_count==2) score+=600*level;
+                    if(clean_count==3) score+=800*level;
+                }
+                back_to_back=1;
+            }else{
+                if(clean_count==1) score+=100*level,back_to_back=0;
+                if(clean_count==2) score+=300*level,back_to_back=0;
+                if(clean_count==3) score+=500*level,back_to_back=0;
+                if(clean_count==4){
+                    score+=800*level;
+                    if(back_to_back)
+                        score+=400*level;
+                    back_to_back=1;
+                }
+            }
+            scoreupdate();
+        }
+        //canvas update
+        function scoreupdate(){
+            for(var i=-7;i<-1;i++){
+                for(var j=11;j<20;j++){
+                    drawrect(i,j,"#c0c0c0",5,"#a0a0a0",0);
+                }
+            }
+            ctx.font = '20pt monospace';
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = "#000000";
+            ctx.strokeText("Level", 90, 375);
+            ctx.strokeText("Score", 90, 465);
+            ctx.strokeText("Line", 95, 555);
+            ctx.font = '30pt Calibri';
+            ctx.strokeText(level, 120-10*Math.floor(Math.log10(level)), 425);
+            if(score==0) ctx.strokeText(score, 120, 515);
+            ctx.strokeText(score, 120-10*Math.floor(Math.log10(score)), 515);
+            if(line==0) ctx.strokeText(line, 120, 605);
+            ctx.strokeText(line, 120-10*Math.floor(Math.log10(line)), 605);
+        }
+        function blockupdate(){
+            for(var i=0;i<10;i++){
+                for(var j=0;j<20;j++){
+                    drawrect(i,j,arr[i][j],5,"#0f0f0f",0);
+                    drawrect(i,j,arr[i][j],5,secondcolor(arr[i][j]),5);
+                }
+            }
+            for(var i=0;i<4;i++){
+                drawrect(current_block[i][0],current_block[i][1],current_color,5,"#ffffff",0);
+                drawrect(current_block[i][0],current_block[i][1],current_color,5,secondcolor(current_color),5);
+            }
+        }
+        //drawing tools
+        function drawcircle(x,y,radius,color){
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, 2 * Math.PI);
+            ctx.fillStyle=color;
+            ctx.fill();
+        }
+        function drawrect(x,y,color,width,widthcolor,margin){
+            ctx.beginPath();
+            ctx.rect(250+x*30+margin, 20+y*30+margin, 30-2*margin, 30-2*margin);
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.lineWidth = width;
+            ctx.strokeStyle = widthcolor;
+            ctx.stroke();
+        }
+    </script>
+</body>
+
 </html>
