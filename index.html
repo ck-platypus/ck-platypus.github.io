@@ -1,1 +1,75 @@
-Hello World
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
+        integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
+        crossorigin="anonymous"></script>
+</head>
+<body data-rsssl=1>
+    <canvas id="myCanvas" width="1400" height="800"></canvas>
+    <script>
+        var canvas = document.getElementById('myCanvas');
+        var ctx = canvas.getContext('2d');
+        var w=1400, h=800;
+        
+        for(var i=0.12;i<=0.1701;i+=0.001){
+            ctx.beginPath();
+            ctx.moveTo(0,10000*i-1000);
+            ctx.lineTo(1400,10000*i-1000);
+            ctx.lineWidth = 0.1;
+            ctx.strokeStyle = '#000000';
+            ctx.stroke();
+            ctx.closePath();
+        }
+        var totalcnt=0, coolcnt=0;
+        setInterval(function(){
+            var node=[], temp;
+            for(var i=0;i<5;i++){
+                node[i]=Math.random();
+            }
+            for(var i=0;i<5;i++){
+                for(var j=0;i+j<5;j++){
+                    if(node[j]>node[j+1]){
+                        temp=node[j];
+                        node[j]=node[j+1];
+                        node[j+1]=temp;
+                    }
+                }
+            }
+            node.sort();
+            var segment=[];
+            segment[0]=node[0];
+            segment[1]=node[1]-node[0];
+            segment[2]=node[2]-node[1];
+            segment[3]=node[3]-node[2];
+            segment[4]=node[4]-node[3];
+            segment[5]=1-node[4];
+            var cool=1;
+            for(var i=0;i<6;i++){
+                if(segment[i]>=0.5) cool=0;
+            }
+            var segmentsum=[];
+            for(var i=0;i<6;i++){
+                for(var j=0;j<i;j++){
+                    segmentsum.push(segment[i]+segment[j]);
+                }
+            }
+            segmentsum.sort();
+            if(segmentsum[14]<0.5) cool=0;
+            if(segmentsum[13]>=0.5) cool=0;
+            coolcnt+=cool;
+            totalcnt++;
+            if(totalcnt%20==0){
+                ctx.beginPath();
+                ctx.arc(totalcnt/30+30,10000*(coolcnt/totalcnt)-1000, 1, 0, 2 * Math.PI, false);
+                ctx.lineWidth = 0.3;
+                ctx.strokeStyle = '#ff0000';
+                ctx.stroke();
+            }
+        },0.001)
+
+    </script>
+</body>
+
+</html>
