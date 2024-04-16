@@ -1,42 +1,15 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>互動網頁示例</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pac-Man Game</title>
     <link rel="stylesheet" href="styles.css">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    <script src="script.js" defer></script>
 </head>
 <body>
-    <div class="container">
-        <h1>歡迎來到互動網頁！</h1>
-        <button id="toggleButton">點擊我！</button>
-        <div id="content" class="content">
-            <p>你成功觸發了互動效果！</p>
-            <p>繼續探索更多互動吧！</p>
-        </div>
-
-        <div id="carousel" class="carousel">
-            <img class="slide" src="https://via.placeholder.com/600x400/ff7f7f/333333?text=1" alt="Slide 1">
-            <img class="slide" src="https://via.placeholder.com/600x400/7f7fff/333333?text=2" alt="Slide 2" style="display:none;">
-            <img class="slide" src="https://via.placeholder.com/600x400/7fff7f/333333?text=3" alt="Slide 3" style="display:none;">
-            <button class="prev">&#10094;</button>
-            <button class="next">&#10095;</button>
-        </div>
-
-        <div id="timer" class="timer">
-            <p>倒數計時器: <span id="time">00:00:30</span></p>
-            <button id="startTimer">開始計時</button>
-        </div>
-
-        <div id="quiz" class="quiz">
-            <p id="question">問題來了：台灣的首都是哪裡？</p>
-            <button class="answer" data-correct="true">台北</button>
-            <button class="answer">台中</button>
-            <button class="answer">高雄</button>
-            <button class="answer">台南</button>
-            <div id="quizResult"></div>
-        </div>
+    <div id="game">
+        <!-- 遊戲畫面將在這裡渲染 -->
     </div>
+    <script src="script.js"></script>
 </body>
 </html>
